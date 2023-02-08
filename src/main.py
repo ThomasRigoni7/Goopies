@@ -11,5 +11,5 @@ if __name__ == "__main__":
         import os
         os.environ["ARCADE_HEADLESS"] = "True"
 
-    sim = Simulation(20, 0, 500)
+    sim = Simulation(100, 0, 2500)
     sim.run(HEADLESS)

@@ -2,13 +2,8 @@ import pymunk
 from goopie import Goopie
 from food import Food
 import numpy as np
+import math
 
-MASS = 1
-GOOPIE_RADIUS = 30
-FOOD_RADIUS = 10
-
-def print_mass_moment(b):
-   print("mass={:.0f} moment={:.0f}".format(b.mass, b.moment))
 
 class Simulation:
     def __init__(self, num_goopies, num_food, space_size) -> None:
@@ -22,13 +17,13 @@ class Simulation:
 
         self.goopies :list[Goopie] = []
         for _ in range(num_goopies):
-            circle_shape = self.create_random_circle_body(MASS, GOOPIE_RADIUS)
+            circle_shape = self.create_random_circle_body(Goopie.MASS, Goopie.RADIUS)
             goopie = Goopie(circle_shape)
             self.goopies.append(goopie)
         
         self.foods :list[Food] = []
         for _ in range(num_food):
-            circle_shape = self.create_random_circle_body(MASS, FOOD_RADIUS)
+            circle_shape = self.create_random_circle_body(Food.MASS, Food.RADIUS)
             food = Food(circle_shape)
             self.foods.append(food)
 
@@ -47,17 +42,15 @@ class Simulation:
     def create_random_circle_body(self, mass: float = 1.0, radius: float = 30.0):
         moment = pymunk.moment_for_circle(mass, 0, radius)          
         circle_body = pymunk.Body(mass, moment)  
-        x = self.generator.normal(loc=0.0, scale=self.space_size / 5)
-        y = self.generator.normal(loc=0.0, scale=self.space_size / 5)
+        x = self.generator.uniform(-self.space_size*0.8, self.space_size*0.8)
+        y = self.generator.uniform(-self.space_size*0.8, self.space_size*0.8)
         circle_body.position = x, y
         circle_body.velocity = 0, 0
+        circle_body.angle = self.generator.uniform(-math.pi, math.pi)
         circle_shape = pymunk.Circle(circle_body, radius)
         circle_shape.elasticity = 0.8
         circle_shape.friction = 1.0
         self.space.add(circle_body, circle_shape)
-
-        print_mass_moment(circle_body)
-
         return circle_shape
 
     def step(self):
