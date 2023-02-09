@@ -1,6 +1,6 @@
 import arcade
 import timeit
-from math import degrees
+from math import degrees, pi
 import pyglet
 
 from simulation import Simulation
@@ -69,7 +69,7 @@ class GameWindow(arcade.Window):
         
         # draw walls
         for wall in self.simulation.walls:
-            arcade.draw_lines([wall.a, wall.b], arcade.color.RED, 10)
+            arcade.draw_lines([wall.a, wall.b], arcade.color.RED, 20)
 
         output = f"Drawing time: {self.draw_time:.5f} seconds per frame."
         arcade.draw_text(output, -self.simulation.space_size + 20, self.simulation.space_size - 60, arcade.color.WHITE, 50)
@@ -82,15 +82,17 @@ class GameWindow(arcade.Window):
             self.update_sprites()
 
         self.frame += 1
+        if self.frame % 1000 == 0:
+            print("frames:", self.frame)
 
         
     def update_sprites(self):
         for goopie in self.simulation.goopies:
             pos = goopie.get_position()
             goopie.sprite.set_position(*pos)
-            goopie.sprite.angle = degrees(goopie.shape.body.angle)
+            goopie.sprite.angle = degrees(goopie.shape.body.angle - pi/2) 
         
         for food in self.simulation.foods:
             pos = food.get_position()
             food.sprite.set_position(*pos)
-            food.sprite.angle = degrees(goopie.shape.body.angle)
+            food.sprite.angle = degrees(food.shape.body.angle - pi/2)

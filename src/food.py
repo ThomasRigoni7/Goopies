@@ -28,7 +28,3 @@ class Food:
 
     def set_sprite(self, sprite):
         self.sprite = sprite
-
-    def delete(self):
-        if self.sprite is not None:
-            self.sprite.kill()

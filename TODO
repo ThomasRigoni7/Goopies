@@ -1,5 +1,5 @@
  - make camera move and zoom
- - add goopies properties like energy etc, make them die + respawn the best ones
+ - add goopies properties like energy etc + respawn the best ones
  - add nn brain
  - add near food and goopies detection for visual of goopies
  - add random mutations
