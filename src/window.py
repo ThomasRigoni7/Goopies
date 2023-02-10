@@ -66,6 +66,9 @@ class GameWindow(arcade.Window):
 
         self.goopie_sprites.draw()
         self.food_sprites.draw()
+
+        for goopie in self.simulation.goopies:
+            arcade.draw_circle_outline(*goopie.get_position(), Goopie.VISION_RADIUS, arcade.color.YELLOW)
         
         # draw walls
         for wall in self.simulation.walls:

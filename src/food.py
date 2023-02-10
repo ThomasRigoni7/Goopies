@@ -23,7 +23,7 @@ class Food:
         self.sprite = None
         self.amount = 0.1
     
-    def get_position(self):
+    def get_position(self) -> pymunk.Vec2d:
         return self.shape.body.position
 
     def set_sprite(self, sprite):
