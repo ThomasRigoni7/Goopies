@@ -74,10 +74,15 @@ class GameWindow(arcade.Window):
         for wall in self.simulation.walls:
             arcade.draw_lines([wall.a, wall.b], arcade.color.RED, 20)
 
-        output1 = f"Step: {self.step_time:.4f}       Drawing: {self.draw_time:.4f}"
+        last_fitness = 0
+        if len(self.simulation.best_goopies) > 0:
+            last_fitness = self.simulation.best_goopies[-1].fitness
+        output1 = f"Step:  {self.step_time:.4f}       Drawing: {self.draw_time:.4f}"
         output2 = f"Space: {self.simulation.space_time:.4f}      Goopie: {self.simulation.goopie_time:.4f}"
+        output3 = f"Best:  {self.simulation.best_fitness:.4f}      Last:   {last_fitness}"
         arcade.draw_text(output1, -self.simulation.space_size + 20, self.simulation.space_size - 60, arcade.color.WHITE, 50)
         arcade.draw_text(output2, -self.simulation.space_size + 20, self.simulation.space_size - 120, arcade.color.WHITE, 50)
+        arcade.draw_text(output3, -self.simulation.space_size + 20, self.simulation.space_size - 180, arcade.color.WHITE, 50)
         self.draw_time = timeit.default_timer() - draw_start_time
 
     def on_update(self, delta_time: float):

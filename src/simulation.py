@@ -43,9 +43,9 @@ class Simulation:
         self.foods :list[Food] = []
         for _ in range(num_food):
             if test:
-                # food1 = Food(50, 50)
+                food1 = Food(25, 25)
                 # food2 = Food(-50, 50)
-                # self.add_food(food1)
+                self.add_food(food1)
                 # self.add_food(food2)
                 pass
             else:
@@ -114,6 +114,7 @@ class Simulation:
         self.goopies.remove(goopie)
         self.space.remove(goopie.shape.body)
         self.space.remove(goopie.shape)
+        self.space.remove(goopie.vision_shape)
         if goopie.sprite is not None:
             goopie.sprite.kill()
 
@@ -163,14 +164,16 @@ class Simulation:
             self.best_goopies.sort(key= lambda g: g.fitness, reverse=True)
             if len(self.best_goopies) > 10:
                 self.best_goopies.pop(10)
-        print("Best goopies fitness:", [g.fitness for g in self.best_goopies])
+            self.fitness_thresh = self.best_goopies[-1].fitness
+            self.best_fitness = self.best_goopies[0].fitness
     
     def spawn_goopie(self, random_prob: float, mutation_prob: float, mutation_amount: float):
         random_spawn = self.generator.uniform() < random_prob
         goopie = Goopie(generation_range=self.goopie_spawn_range, generator=self.generator)
         if len(self.best_goopies) > 0 and not random_spawn:
             # load nn from one of the best fit goopies
-            index = int(torch.distributions.Categorical(probs=torch.tensor([g.fitness for g in self.best_goopies])).sample())
+            probs = torch.nn.functional.softmax(torch.tensor([g.fitness / 3 for g in self.best_goopies]), dim=0)
+            index = int(torch.distributions.Categorical(probs=probs).sample())
             goopie.brain.load_state_dict(self.best_goopies[index].brain.state_dict())
             goopie.mutate(mutation_prob, mutation_amount)
         self.add_goopie(goopie)

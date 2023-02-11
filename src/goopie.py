@@ -12,7 +12,7 @@ class Goopie:
     VISION_RADIUS = 150
     COLLISION_TYPE = 1
     VISION_COLLISION_TYPE = 3
-    VISION_WIDTH = 16
+    VISION_WIDTH = 8
     def __init__(self, x: float = None, y:float = None, angle:float = None, generation_range: float = 2000, generator = np.random.default_rng()) -> None:
         
         self.create_shapes(x, y, angle, generation_range, generator)
@@ -25,7 +25,7 @@ class Goopie:
         self.max_speed = 200
 
         self.visual_buffer = torch.zeros((3, self.VISION_WIDTH))
-        self.brain = Brain(self.VISION_WIDTH, 3)
+        self.brain = Brain(self.VISION_WIDTH, 3).requires_grad_(False)
         self.fitness: float = 0.0
     
     def create_shapes(self, x: float = None, y:float = None, angle:float = None, generation_range: float = 2000, generator = np.random.default_rng()):

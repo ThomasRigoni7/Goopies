@@ -17,4 +17,8 @@ class Brain(nn.Module):
         return x[0, 0], x[0, 1]
 
     def mutate(self, mutation_prob: float, mutation_amount: float):
-        pass
+        parameters = self.parameters()
+        for p in parameters:
+            mutation_mask = torch.distributions.Categorical(probs=torch.tensor([1 - mutation_prob, mutation_prob])).sample(p.size())
+            mutation = torch.distributions.Normal(loc=0, scale=mutation_amount).sample(p.size())
+            p += mutation * mutation_mask
