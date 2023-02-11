@@ -26,6 +26,7 @@ class Goopie:
 
         self.visual_buffer = torch.zeros((3, self.VISION_WIDTH))
         self.brain = Brain(self.VISION_WIDTH, 3)
+        self.fitness: float = 0.0
     
     def create_shapes(self, x: float = None, y:float = None, angle:float = None, generation_range: float = 2000, generator = np.random.default_rng()):
         moment = pymunk.moment_for_circle(self.MASS, 0, self.RADIUS)          
@@ -72,7 +73,9 @@ class Goopie:
         The goopie is colliding with food, does it eat it? What happens?
         Returns True if the goopie eats the food, False otherwise.
         """
-        self.energy = max(1, self.energy + food.amount)
+        amount = min(1 - self.energy, food.amount)
+        self.energy += amount 
+        self.fitness += amount
         return True
 
     def is_alive(self):
@@ -180,3 +183,5 @@ class Goopie:
         self.shape.body.velocity = velocity
         self.shape.body.apply_force_at_local_point((acceleration * self.max_acceleration, 0), (0,0))
 
+    def mutate(self, mutation_prob: float, mutation_amount: float):
+        self.brain.mutate(mutation_prob, mutation_amount)

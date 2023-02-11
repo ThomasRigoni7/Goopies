@@ -1,4 +1,4 @@
  - make camera move and zoom
- - add goopies properties like energy etc + respawn the best ones
+ - add goopies properties
  - add random mutations
  - make goopie vision be faster (Goopie._update_approx_vision)

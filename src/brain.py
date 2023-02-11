@@ -15,3 +15,6 @@ class Brain(nn.Module):
         x = self.fc(x)
         x = torch.tanh(x)
         return x[0, 0], x[0, 1]
+
+    def mutate(self, mutation_prob: float, mutation_amount: float):
+        pass
