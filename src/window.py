@@ -74,11 +74,15 @@ class GameWindow(arcade.Window):
         for wall in self.simulation.walls:
             arcade.draw_lines([wall.a, wall.b], arcade.color.RED, 20)
 
-        output = f"Drawing time: {self.draw_time:.5f} seconds per frame."
-        arcade.draw_text(output, -self.simulation.space_size + 20, self.simulation.space_size - 60, arcade.color.WHITE, 50)
+        output1 = f"Step: {self.step_time:.4f}       Drawing: {self.draw_time:.4f}"
+        output2 = f"Space: {self.simulation.space_time:.4f}      Goopie: {self.simulation.goopie_time:.4f}"
+        arcade.draw_text(output1, -self.simulation.space_size + 20, self.simulation.space_size - 60, arcade.color.WHITE, 50)
+        arcade.draw_text(output2, -self.simulation.space_size + 20, self.simulation.space_size - 120, arcade.color.WHITE, 50)
         self.draw_time = timeit.default_timer() - draw_start_time
 
     def on_update(self, delta_time: float):
+        step_start_time = timeit.default_timer()
+
         self.simulation.step()
 
         if not self.headless:
@@ -87,6 +91,8 @@ class GameWindow(arcade.Window):
         self.frame += 1
         if self.frame % 1000 == 0:
             print("frames:", self.frame)
+        
+        self.step_time = timeit.default_timer() - step_start_time
 
         
     def update_sprites(self):

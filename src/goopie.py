@@ -4,6 +4,7 @@ import numpy as np
 from food import Food
 import torch
 import shapely.geometry as G
+from brain import Brain
 
 class Goopie:
     MASS = 0.05
@@ -11,7 +12,7 @@ class Goopie:
     VISION_RADIUS = 150
     COLLISION_TYPE = 1
     VISION_COLLISION_TYPE = 3
-    VISION_WIDTH = 18
+    VISION_WIDTH = 16
     def __init__(self, x: float = None, y:float = None, angle:float = None, generation_range: float = 2000, generator = np.random.default_rng()) -> None:
         
         self.create_shapes(x, y, angle, generation_range, generator)
@@ -24,6 +25,7 @@ class Goopie:
         self.max_speed = 200
 
         self.visual_buffer = torch.zeros((3, self.VISION_WIDTH))
+        self.brain = Brain(self.VISION_WIDTH, 3)
     
     def create_shapes(self, x: float = None, y:float = None, angle:float = None, generation_range: float = 2000, generator = np.random.default_rng()):
         moment = pymunk.moment_for_circle(self.MASS, 0, self.RADIUS)          
@@ -70,7 +72,7 @@ class Goopie:
         The goopie is colliding with food, does it eat it? What happens?
         Returns True if the goopie eats the food, False otherwise.
         """
-        self.energy += food.amount
+        self.energy = max(1, self.energy + food.amount)
         return True
 
     def is_alive(self):
@@ -104,7 +106,6 @@ class Goopie:
         self._update_approx_vision(position, radius, channel)
 
     def _update_approx_vision(self, position: pymunk.Vec2d, radius: float, channel: int):
-        mask = torch.zeros((1, self.VISION_WIDTH))
         # the angle in radiants (-pi < angle < pi)
         vec_to_obj = position - self.get_position()
         a = position + vec_to_obj.perpendicular_normal() * radius
@@ -134,30 +135,6 @@ class Goopie:
         # print("vision relative position:", position - self.get_position())
         # print("vision radius:", radius)
 
-    def _calculate_approx_wall_vision_old(self, wall_shape: pymunk.Segment) -> tuple[pymunk.Vec2d, float]:
-        """
-        Given the shape of the wall the goopie is seeing, calculates the 
-        position and radius of its visible portion by the goopie.
-        """
-        wall_center: pymunk.Vec2d = (wall_shape.a + wall_shape.b) / 2
-        self_pos = self.get_position()
-        if wall_center.x > 1 or wall_center.x < 1:
-            dist = wall_center.x - self_pos.x
-            x = wall_center.x
-            y = self_pos.y
-            print("wall dist x:", dist)
-            radius = abs(math.sin(math.acos(dist / self.VISION_RADIUS)) * self.VISION_RADIUS)
-
-        elif wall_center.y > 1 or wall_center.y < 1:
-            dist = wall_center.y - self_pos.y
-            print("wall dist y:", dist)
-            x = self_pos.x
-            y = wall_center.y
-            radius = abs(math.cos(math.asin(dist / self.VISION_RADIUS)) * self.VISION_RADIUS)
-
-        position = pymunk.Vec2d(x, y)
-        return position, radius
-
     def _calculate_approx_wall_vision(self, wall_shape: pymunk.Segment) -> tuple[pymunk.Vec2d, float]:
         """
         Given the shape of the wall the goopie is seeing, calculates the 
@@ -184,8 +161,11 @@ class Goopie:
         if self.energy <= 0:
             self.alive = False
 
+        # forward in the brain
+        turn, accelerate = self.brain(self.visual_buffer, self.energy, self.shape.body.velocity.length / self.max_speed)
+
         # make the goopie move
-        self.movement_step(0, 1)
+        self.movement_step(turn, accelerate)
 
     def movement_step(self, turn: float, acceleration: float):
         """

@@ -7,7 +7,7 @@ class Food:
     COLLISION_TYPE = 2
     def __init__(self, x: float = None, y:float = None, generation_range: float = 2000, generator = np.random.default_rng()) -> None:
         moment = pymunk.moment_for_circle(self.MASS, 0, self.RADIUS)          
-        circle_body = pymunk.Body(self.MASS, moment)  
+        circle_body = pymunk.Body(self.MASS, moment, pymunk.Body.STATIC)  
         if x is None:
             x = generator.uniform(-generation_range, generation_range)
         if y is None:

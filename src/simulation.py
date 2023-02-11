@@ -3,6 +3,7 @@ from goopie import Goopie
 from food import Food
 import numpy as np
 import math
+import timeit
 
 class Simulation:
     WALL_COLLISION_TYPE = 4
@@ -40,6 +41,7 @@ class Simulation:
             else:
                 food = Food(generation_range=space_size * 0.9)
                 self.add_food(food)
+
 
     def set_collision_handlers(self):
         goopie_food_collision_handler = self.space.add_collision_handler(Goopie.COLLISION_TYPE, Food.COLLISION_TYPE)
@@ -120,11 +122,16 @@ class Simulation:
         for goopie in self.goopies:
             goopie.reset_vision()
 
+        space_step_start_time = timeit.default_timer()
         self.space.step(dt)
+        self.space_time = timeit.default_timer() - space_step_start_time
+
+        goopie_step_start_time = timeit.default_timer()
         for goopie in self.goopies:
             goopie.step(dt)
             if not goopie.is_alive():
                 self.remove_goopie(goopie)
+        self.goopie_time = timeit.default_timer() - goopie_step_start_time
         
     def run(self, headless: bool = False):
         from window import GameWindow
