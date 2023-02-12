@@ -21,7 +21,7 @@ class Food:
         circle_shape.food = self
         self.shape = circle_shape
         self.sprite = None
-        self.amount = 0.1
+        self.amount = 0.3
     
     def get_position(self) -> pymunk.Vec2d:
         return self.shape.body.position

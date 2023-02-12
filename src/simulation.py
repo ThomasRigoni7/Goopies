@@ -5,10 +5,11 @@ import numpy as np
 import torch
 import math
 import timeit
+from pathlib import Path
 
 class Simulation:
     WALL_COLLISION_TYPE = 4
-    def __init__(self, num_goopies, num_food, space_size, test: bool = False, respawn_rate: float = 0.5, mutation_prob = 0.5, mutation_amount = 0.1) -> None:
+    def __init__(self, num_goopies, num_food, space_size, test: bool = False, respawn_rate: float = 0.5, mutation_prob = 0.5, mutation_amount = 0.1, blueprint: str = None) -> None:
         super().__init__()
         self.num_goopies = num_goopies
         self.num_food = num_food
@@ -18,11 +19,17 @@ class Simulation:
         self.mutation_prob = mutation_prob
         self.mutation_amount = mutation_amount
 
-        self.goopie_spawn_range = space_size * 0.8
-        self.food_spawn_range = space_size * 0.9
-
-        # create all the goopies, food and walls together with pymunk objects for everything
         self.generator = np.random.default_rng()
+        self.goopie_spawn_range = space_size * 0.8
+        self.food_spawn_range = space_size - (2 * 10 + Food.RADIUS) # 2 * wall width + food radius
+        self.num_steps = 0
+        self.best_goopies: list[Goopie] = []
+        self.fitness_thresh = 0
+        self.best_fitness = 0
+
+        if blueprint is not None:
+            self.add_blueprint(blueprint)
+        # create all the goopies, food and walls together with pymunk objects for everything
         self.space: pymunk.Space = pymunk.Space()
         self.window = None
         self.set_collision_handlers()
@@ -37,8 +44,7 @@ class Simulation:
                 self.add_goopie(goopie1)
                 self.add_goopie(goopie2)
             else:
-                goopie = Goopie(generation_range=self.goopie_spawn_range, generator=self.generator)
-                self.add_goopie(goopie)
+                self.spawn_goopie(0.5, 0.0, 0.0)
         
         self.foods :list[Food] = []
         for _ in range(num_food):
@@ -52,9 +58,6 @@ class Simulation:
                 food = Food(generation_range=self.food_spawn_range, generator=self.generator)
                 self.add_food(food)
         
-        self.best_goopies: list[Goopie] = []
-        self.fitness_thresh = 0
-        self.best_fitness = 0
 
 
     def set_collision_handlers(self):
@@ -137,6 +140,12 @@ class Simulation:
         if self.window is not None and not self.window.headless:
             self.window.add_food_sprite(food)
 
+    def add_blueprint(self, brain_path: str):
+        goopie = Goopie()
+        goopie.fitness = 0.05
+        goopie.brain.load_state_dict(torch.load(brain_path))
+        self.update_best_goopies(goopie)
+
     def step(self):
         dt = 0.01
 
@@ -157,6 +166,11 @@ class Simulation:
                     self.spawn_goopie(self.respawn_rate, self.mutation_prob, self.mutation_amount)
 
         self.goopie_time = timeit.default_timer() - goopie_step_start_time
+
+
+        self.num_steps += 1
+        if self.num_steps % 10000 == 0:
+            self.save_best_goopies("checkpoints/blueprint2/")
         
     def update_best_goopies(self, goopie: Goopie):
         if goopie.fitness > self.fitness_thresh:
@@ -175,13 +189,21 @@ class Simulation:
             probs = torch.nn.functional.softmax(torch.tensor([g.fitness / 3 for g in self.best_goopies]), dim=0)
             index = int(torch.distributions.Categorical(probs=probs).sample())
             goopie.brain.load_state_dict(self.best_goopies[index].brain.state_dict())
-            goopie.mutate(mutation_prob, mutation_amount)
+            if mutation_prob > 0 and mutation_amount > 0:
+                goopie.mutate(mutation_prob, mutation_amount)
         self.add_goopie(goopie)
         return goopie
-
 
     def run(self, headless: bool = False):
         from window import GameWindow
         update_rate = 1e-5 if headless else 1/60
         self.window = GameWindow(self, update_rate)
         self.window.run()
+    
+    def save_best_goopies(self, folder):
+        save_folder = Path(folder)
+        save_folder.mkdir(exist_ok=True)
+        for f in save_folder.glob("*"):
+            f.unlink()
+        for g in self.best_goopies:
+            g.save(save_folder / f"best_goopie_{g.fitness}.pt")

@@ -5,14 +5,15 @@ from food import Food
 import torch
 import shapely.geometry as G
 from brain import Brain
+from pathlib import Path
 
 class Goopie:
     MASS = 0.05
     RADIUS = 30
-    VISION_RADIUS = 150
+    VISION_RADIUS = 300
     COLLISION_TYPE = 1
     VISION_COLLISION_TYPE = 3
-    VISION_WIDTH = 8
+    VISION_WIDTH = 10
     def __init__(self, x: float = None, y:float = None, angle:float = None, generation_range: float = 2000, generator = np.random.default_rng()) -> None:
         
         self.create_shapes(x, y, angle, generation_range, generator)
@@ -185,3 +186,7 @@ class Goopie:
 
     def mutate(self, mutation_prob: float, mutation_amount: float):
         self.brain.mutate(mutation_prob, mutation_amount)
+
+    def save(self, path: str|Path):
+        # for now save only the brain
+        torch.save(self.brain.state_dict(), path)
