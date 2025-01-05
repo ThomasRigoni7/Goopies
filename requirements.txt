@@ -1,0 +1,6 @@
+pyglet
+torch
+torchvision
+torchaudio
+pymunk
+shapely

@@ -18,6 +18,7 @@ class Goopie:
         
         self.create_shapes(x, y, angle, generation_range, generator)
         self.sprite = None
+        self.vision_arc = None
 
         self.energy = 1
         self.alive = True
@@ -187,6 +188,6 @@ class Goopie:
     def mutate(self, mutation_prob: float, mutation_amount: float):
         self.brain.mutate(mutation_prob, mutation_amount)
 
-    def save(self, path: str|Path):
+    def save(self, path: str):
         # for now save only the brain
         torch.save(self.brain.state_dict(), path)

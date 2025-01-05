@@ -119,14 +119,16 @@ class Simulation:
         self.space.remove(goopie.shape)
         self.space.remove(goopie.vision_shape)
         if goopie.sprite is not None:
-            goopie.sprite.kill()
+            goopie.sprite.delete()
+        if goopie.vision_arc is not None:
+            goopie.vision_arc.delete()
 
     def remove_food(self, food: Food):
         self.foods.remove(food)
         self.space.remove(food.shape.body)
         self.space.remove(food.shape)
         if food.sprite is not None:
-            food.sprite.kill()
+            food.sprite.delete()
 
     def add_goopie(self, goopie: Goopie):
         self.space.add(goopie.shape.body, goopie.shape, goopie.vision_shape)
@@ -195,11 +197,33 @@ class Simulation:
         return goopie
 
     def run(self, headless: bool = False):
-        from window import GameWindow
         update_rate = 1e-5 if headless else 1/60
-        self.window = GameWindow(self, update_rate)
+        from window_pyglet import GameWindow
+        self.window = GameWindow(self)
         self.window.run()
-    
+        # from pymunk.pyglet_util import DrawOptions
+        # import pyglet
+        # options = DrawOptions()
+
+        # from pyglet.window import Window
+        # window = Window(height=1000, width=1000)
+        # from camera_group import CenteredCameraGroup
+        # camera = CenteredCameraGroup(window, 0, 0, 0.5)
+        
+        # @window.event
+        # def on_draw():
+        #     pyglet.gl.glClearColor(0, 0, 0, 0)
+        #     window.clear()
+
+        #     self.step()
+        #     camera.set_state()
+        #     self.space.debug_draw(options)
+        #     camera.unset_state()
+
+        # pyglet.app.run()
+
+        
+
     def save_best_goopies(self, folder):
         save_folder = Path(folder)
         save_folder.mkdir(exist_ok=True)
