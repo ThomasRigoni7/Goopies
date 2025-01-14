@@ -14,6 +14,6 @@ if __name__ == "__main__":
     if TEST:
         sim = Simulation(1, 1, 200, TEST)
     else:
-        sim = Simulation(20, 500, 5000, blueprint="checkpoints/manual/net.pt")
+        sim = Simulation(30, 200, 2500)
         # sim = Simulation(100, 2000, 2500)
     sim.run(HEADLESS)

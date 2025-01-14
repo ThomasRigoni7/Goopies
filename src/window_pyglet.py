@@ -20,9 +20,11 @@ class GameWindow(Window):
     def __init__(self, simulation: Simulation, width:int = SCREEN_WIDTH, height:int = SCREEN_HEIGHT, title:str=WINDOW_TITLE):
         super().__init__(width=width, height=height, caption=title)
         pyglet.gl.glClearColor(0, 0, 0, 0)
-        self.set_location(400, 200)
+        self.set_location(900, 200)
         
-        self.camera = CenteredCameraGroup(self, 0, 0, 0.45)
+        zoom = 500 / simulation.space_size
+
+        self.camera = CenteredCameraGroup(self, 0, 0, zoom)
 
 
         self.food_img = pyglet.image.load("./sprites/food.png")
@@ -53,6 +55,7 @@ class GameWindow(Window):
         self.draw_time = 0
         self.frame = 0
         self.headless = False
+        self.step_time = None
 
     def add_goopie_sprite(self, goopie: Goopie):
         scale = 2 * goopie.RADIUS / GOOPIE_IMAGE_SIZE
@@ -62,7 +65,7 @@ class GameWindow(Window):
         sprite.position = (x, y, 0)
         goopie.set_sprite(sprite)
 
-        vision_arc = pyglet.shapes.Arc(x, y, radius=goopie.VISION_RADIUS, thickness=1, batch=self.goopie_vision_arcs_batch, group=self.camera)
+        vision_arc = pyglet.shapes.Arc(x, y, radius=goopie.vision.VISION_RADIUS, thickness=1, batch=self.goopie_vision_arcs_batch, group=self.camera)
         goopie.vision_arc = vision_arc
         
 
@@ -80,7 +83,9 @@ class GameWindow(Window):
 
     def on_draw(self):
 
+        step_start_time = timeit.default_timer()
         self.simulation.step()
+        self.step_time = timeit.default_timer() - step_start_time
         self.update_sprites()
 
 
@@ -98,15 +103,33 @@ class GameWindow(Window):
         # draw walls
         self.wall_lines.draw()
         
+        if False:
+            # show vision of first goopie
+            from goopie import VisionGoopie
+            g : VisionGoopie = self.simulation.goopies[0]
+            vision = (g.visual_buffer * 255).byte().numpy()
+            import numpy as np
+            vision = np.dstack([vision, vision, vision]) * 255
+            pixels = vision.flatten().tolist()
+            from pyglet.gl import GLubyte
+            rawData = (GLubyte * len(pixels))(*pixels)
+            imageData = pyglet.image.ImageData(10, 3, 'RGB', rawData)
+            rect = pyglet.shapes.Rectangle(690, 30, 120, 50)
+            rect.draw()
+            imageData.blit(700, 40, width=100, height=30)
+
+        pyglet.text.Label(f"Age: {self.simulation.goopies[0].age}", 20, 80, color=[255, 255, 255], height=100).draw()
+
+        # show stats
         last_fitness = 0
-        # if len(self.simulation.best_goopies) > 0:
-        #     last_fitness = self.simulation.best_goopies[-1].fitness
-        # output1 = f"Step:  {self.step_time:.4f}       Drawing: {self.draw_time:.4f}"
-        # output2 = f"Space: {self.simulation.space_time:.4f}      Goopie: {self.simulation.goopie_time:.4f}"
-        # output3 = f"Best:  {self.simulation.best_fitness:.4f}      Last:   {last_fitness}"
-        # arcade.draw_text(output1, -self.simulation.space_size + 20, self.simulation.space_size - 120, arcade.color.WHITE, 100)
-        # arcade.draw_text(output2, -self.simulation.space_size + 20, self.simulation.space_size - 240, arcade.color.WHITE, 100)
-        # arcade.draw_text(output3, -self.simulation.space_size + 20, self.simulation.space_size - 360, arcade.color.WHITE, 100)
+        if len(self.simulation.best_goopies) > 0:
+            last_fitness = self.simulation.best_goopies[-1].fitness
+        output1 = f"Step:  {self.step_time:.4f}       Drawing: {self.draw_time:.4f}"
+        output2 = f"Space: {self.simulation.space_time:.4f}      Goopie: {self.simulation.goopie_time:.4f}"
+        output3 = f"Best:  {self.simulation.best_fitness:.4f}      Last:   {last_fitness}"
+        pyglet.text.Label(output1, 20, 60, color=[255, 255, 255], height=100).draw()
+        pyglet.text.Label(output2, 20, 40, color=[255, 255, 255], height=100).draw()
+        pyglet.text.Label(output3, 20, 20, color=[255, 255, 255], height=100).draw()
         self.draw_time = timeit.default_timer() - draw_start_time
 
     def update_sprites(self):

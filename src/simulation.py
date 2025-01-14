@@ -1,5 +1,6 @@
 import pymunk
-from goopie import Goopie
+from goopie import Goopie, CNNGoopie
+from vision import Vision
 from food import Food
 import numpy as np
 import torch
@@ -43,6 +44,7 @@ class Simulation:
                 goopie2 = Goopie(50, 50, math.pi/4)
                 self.add_goopie(goopie1)
                 self.add_goopie(goopie2)
+                break
             else:
                 self.spawn_goopie(0.5, 0.0, 0.0)
         
@@ -57,14 +59,14 @@ class Simulation:
             else:
                 food = Food(generation_range=self.food_spawn_range, generator=self.generator)
                 self.add_food(food)
-        
+
 
 
     def set_collision_handlers(self):
         goopie_food_collision_handler = self.space.add_collision_handler(Goopie.COLLISION_TYPE, Food.COLLISION_TYPE)
-        vision_food_collision_handler = self.space.add_collision_handler(Goopie.VISION_COLLISION_TYPE, Food.COLLISION_TYPE)
-        vision_goopie_collision_handler = self.space.add_collision_handler(Goopie.VISION_COLLISION_TYPE, Goopie.COLLISION_TYPE)
-        vision_wall_collision_handler = self.space.add_collision_handler(Goopie.VISION_COLLISION_TYPE, self.WALL_COLLISION_TYPE)
+        vision_food_collision_handler = self.space.add_collision_handler(Vision.VISION_COLLISION_TYPE, Food.COLLISION_TYPE)
+        vision_goopie_collision_handler = self.space.add_collision_handler(Vision.VISION_COLLISION_TYPE, Goopie.COLLISION_TYPE)
+        vision_wall_collision_handler = self.space.add_collision_handler(Vision.VISION_COLLISION_TYPE, self.WALL_COLLISION_TYPE)
 
         goopie_food_collision_handler.pre_solve = self.goopie_food_collision
         vision_food_collision_handler.pre_solve = self.vision_food_collision
@@ -161,6 +163,9 @@ class Simulation:
         goopie_step_start_time = timeit.default_timer()
         for goopie in self.goopies:
             goopie.step(dt)
+            child = goopie.reproduce()
+            if child is not None:
+                self.add_goopie(child)
             if not goopie.is_alive():
                 self.remove_goopie(goopie)
                 self.update_best_goopies(goopie)
@@ -183,9 +188,9 @@ class Simulation:
             self.fitness_thresh = self.best_goopies[-1].fitness
             self.best_fitness = self.best_goopies[0].fitness
     
-    def spawn_goopie(self, random_prob: float, mutation_prob: float, mutation_amount: float):
+    def spawn_goopie(self, random_prob: float, mutation_prob: float, mutation_amount: float):   
         random_spawn = self.generator.uniform() < random_prob
-        goopie = Goopie(generation_range=self.goopie_spawn_range, generator=self.generator)
+        goopie = CNNGoopie(generation_range=self.goopie_spawn_range, generator=self.generator)
         if len(self.best_goopies) > 0 and not random_spawn:
             # load nn from one of the best fit goopies
             probs = torch.nn.functional.softmax(torch.tensor([g.fitness / 3 for g in self.best_goopies]), dim=0)

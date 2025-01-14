@@ -3,32 +3,30 @@ import math
 import numpy as np
 from food import Food
 import torch
-import shapely.geometry as G
 from brain import Brain
-from pathlib import Path
+from abc import ABC, abstractmethod
+from vision import Vision, WideVision, ClosestVision
+from brain import Brain, CNNBrain, NeatBrain
 
-class Goopie:
+class Goopie(ABC):
     MASS = 0.05
     RADIUS = 30
-    VISION_RADIUS = 300
     COLLISION_TYPE = 1
-    VISION_COLLISION_TYPE = 3
-    VISION_WIDTH = 10
     def __init__(self, x: float = None, y:float = None, angle:float = None, generation_range: float = 2000, generator = np.random.default_rng()) -> None:
         
         self.create_shapes(x, y, angle, generation_range, generator)
         self.sprite = None
         self.vision_arc = None
+        self.age = 0
 
         self.energy = 1
         self.alive = True
-        self.max_turn = 0.05
+        self.max_turn = 1
         self.max_acceleration = 20
         self.max_speed = 200
-
-        self.visual_buffer = torch.zeros((3, self.VISION_WIDTH))
-        self.brain = Brain(self.VISION_WIDTH, 3).requires_grad_(False)
         self.fitness: float = 0.0
+        self.vision : Vision = None 
+        self.brain : Brain = None
     
     def create_shapes(self, x: float = None, y:float = None, angle:float = None, generation_range: float = 2000, generator = np.random.default_rng()):
         moment = pymunk.moment_for_circle(self.MASS, 0, self.RADIUS)          
@@ -51,8 +49,8 @@ class Goopie:
         shape.goopie = self 
         self.shape = shape
         # create the vision shape
-        vision_shape = pymunk.Circle(circle_body, self.VISION_RADIUS)
-        vision_shape.collision_type = self.VISION_COLLISION_TYPE
+        vision_shape = pymunk.Circle(circle_body, Vision.VISION_RADIUS)
+        vision_shape.collision_type = Vision.VISION_COLLISION_TYPE
         vision_shape.sensor = True
         vision_shape.goopie = self
         self.vision_shape = vision_shape
@@ -84,93 +82,24 @@ class Goopie:
         return self.alive
 
     def reset_vision(self):
-        self.visual_buffer = torch.zeros((3, self.VISION_WIDTH))
+        self.vision.reset()
 
     def update_vision(self, shape: pymunk.Shape, type: str):
-        """
-        Update the vision buffer with the given shape, drawing its approximate figure into the vision buffer
-        """
-        if type == "wall":
-            # print("SEEING WALL")
-            position, radius = self._calculate_approx_wall_vision(shape)
-            channel = 0
-        elif type == "goopie":
-            # print("SEEING GOOPIE")
-            other: Goopie = shape.goopie
-            position = other.get_position()
-            radius = other.RADIUS
-            channel = 1
-        elif type == "food":
-            # print("SEEING FOOD")
-            food: Food = shape.food
-            position = food.get_position()
-            radius = food.RADIUS
-            channel = 2
-        else:
-            raise("With what are you colliding?????")
-        self._update_approx_vision(position, radius, channel)
-
-    def _update_approx_vision(self, position: pymunk.Vec2d, radius: float, channel: int):
-        # the angle in radiants (-pi < angle < pi)
-        vec_to_obj = position - self.get_position()
-        a = position + vec_to_obj.perpendicular_normal() * radius
-        b = position - vec_to_obj.perpendicular_normal() * radius
-        a_angle = math.remainder(self.shape.body.angle - (a - self.get_position()).angle, math.tau)
-        b_angle = math.remainder(self.shape.body.angle - (b - self.get_position()).angle, math.tau)
-        a_index = math.floor((a_angle + math.pi) * (self.VISION_WIDTH / (2 * math.pi))) % self.VISION_RADIUS
-        b_index = math.floor((b_angle + math.pi) * (self.VISION_WIDTH / (2 * math.pi))) % self.VISION_RADIUS
-        
-        distance = (position - self.get_position()).length
-        activation = min(max(0, 1 - ((distance - self.RADIUS)/self.VISION_RADIUS)), 1)
-
-        if a_index <= b_index:
-            act_tensor = torch.tensor([activation]*(b_index - a_index + 1))
-            self.visual_buffer[channel][a_index: b_index + 1] = torch.max(self.visual_buffer[channel][a_index: b_index + 1], act_tensor)
-        else:
-            act_tensor1 = torch.tensor([activation]*(b_index + 1))
-            act_tensor2 = torch.tensor([activation]*(self.VISION_WIDTH - a_index))
-            self.visual_buffer[channel][:b_index + 1] = torch.max(self.visual_buffer[channel][:b_index + 1], act_tensor1)
-            self.visual_buffer[channel][a_index:] = torch.max(self.visual_buffer[channel][a_index:], act_tensor2)
-
-        # print(self.visual_buffer)
-        # print("a angle:", a_angle)
-        # print("b angle:", b_angle)
-        # print("indexes:", a_index, b_index)
-        # print("vision position:", position)
-        # print("vision relative position:", position - self.get_position())
-        # print("vision radius:", radius)
-
-    def _calculate_approx_wall_vision(self, wall_shape: pymunk.Segment) -> tuple[pymunk.Vec2d, float]:
-        """
-        Given the shape of the wall the goopie is seeing, calculates the 
-        position and radius of its visible portion by the goopie.
-        """
-        # need to add to the radius the wall width, otherwise there could be a collision in the shapes that generates no interception
-        circle = G.Point(*self.get_position()).buffer(self.VISION_RADIUS + 10).boundary
-        # extend the wall such that it will always create 2 collisions, even with big vision radius of goopies in the corners
-        wall_center: pymunk.Vec2d = (wall_shape.a + wall_shape.b) / 2
-        a = wall_center + (wall_center - wall_shape.a) * 10
-        b = wall_center + (wall_center - wall_shape.b) * 10
-        line = G.LineString([a, b])
-        intersection: G.MultiPoint = circle.intersection(line)
-        p1 = pymunk.Vec2d(*intersection.geoms[0].coords[0])
-        p2 = pymunk.Vec2d(*intersection.geoms[1].coords[0])
-
-        position = (p1 + p2) / 2
-        radius = (p1 - p2).length / 2
-        return position, radius
+        self.vision.update(shape, type)
 
 
+    @abstractmethod
     def step(self, dt: float):
-        self.energy -= 0.1*dt
-        if self.energy <= 0:
-            self.alive = False
+        """
+        Abstract function that implements the logic for a step.
 
-        # forward in the brain
-        turn, accelerate = self.brain(self.visual_buffer, self.energy, self.shape.body.velocity.length / self.max_speed)
+        Parameters
+        ----------
+        dt : float
+            delta time
+        """
+        ...
 
-        # make the goopie move
-        self.movement_step(turn, accelerate)
 
     def movement_step(self, turn: float, acceleration: float):
         """
@@ -191,3 +120,40 @@ class Goopie:
     def save(self, path: str):
         # for now save only the brain
         torch.save(self.brain.state_dict(), path)
+
+    @abstractmethod
+    def reproduce(self):
+        ...
+
+class CNNGoopie(Goopie):
+
+    def __init__(self, x: float = None, y:float = None, angle:float = None, generation_range: float = 2000, generator = np.random.default_rng()):
+        super().__init__(x, y, angle, generation_range, generator)
+
+        self.vision = WideVision(self)
+        self.brain = CNNBrain(self.vision.VISION_BUFFER_WIDTH, 3).requires_grad_(False)
+    
+    def step(self, dt: float):
+        self.energy -= 0.1*dt
+        self.age += dt
+        if self.energy <= 0:
+            self.alive = False
+
+        # forward in the brain
+        turn, accelerate = self.brain(self.vision.visual_buffer, self.energy, self.shape.body.velocity.length / self.max_speed)
+
+        # make the goopie move
+        self.movement_step(turn, accelerate)
+
+    def reproduce(self):
+        if self.age > 3 and self.energy > 0.8:
+            child = CNNGoopie(self.get_position().x, self.get_position().y)
+
+            child.brain.load_state_dict(self.brain.state_dict())
+            child.mutate(0.5, 0.1)
+            self.energy -= 0.4
+            return child
+            
+
+class NEATGoopie():
+    pass
