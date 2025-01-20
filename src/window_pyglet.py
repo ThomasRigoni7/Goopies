@@ -48,7 +48,7 @@ class GameWindow(Window):
         self.wall_lines = pyglet.graphics.Batch()
         self.walls = []
         for wall in simulation.walls:
-            w = pyglet.shapes.Line(wall.a.x, wall.a.y, wall.b.x, wall.b.y, width=20, color=[255, 255, 255, 255], batch=self.wall_lines, group=self.camera)
+            w = pyglet.shapes.Line(wall.a.x, wall.a.y, wall.b.x, wall.b.y, thickness=20, color=[255, 255, 255, 255], batch=self.wall_lines, group=self.camera)
             self.walls.append(w)
         
         self.simulation = simulation
@@ -89,10 +89,9 @@ class GameWindow(Window):
         self.update_sprites()
 
 
-        self.clear()            
+        self.clear()
 
         draw_start_time = timeit.default_timer()
-        # arcade.start_render()
 
         self.goopie_sprites.draw()
         self.food_sprites.draw()
@@ -118,16 +117,17 @@ class GameWindow(Window):
             rect.draw()
             imageData.blit(700, 40, width=100, height=30)
 
-        pyglet.text.Label(f"Age: {self.simulation.goopies[0].age}", 20, 80, color=[255, 255, 255], height=100).draw()
+        # pyglet.text.Label(f"Age: {self.simulation.goopies[0].age}", 20, 80, color=[255, 255, 255], height=100).draw()
 
         # show stats
         last_fitness = 0
         if len(self.simulation.best_goopies) > 0:
             last_fitness = self.simulation.best_goopies[-1].fitness
-        output1 = f"Step:  {self.step_time:.4f}       Drawing: {self.draw_time:.4f}"
-        output2 = f"Space: {self.simulation.space_time:.4f}      Goopie: {self.simulation.goopie_time:.4f}"
+        # output1 = f"Step:  {self.step_time:.4f}       Drawing: {self.draw_time:.4f}"
+        # output2 = f"Space: {self.simulation.space_time:.4f}      Goopie: {self.simulation.goopie_time:.4f}"
+        output2 = f"FPS: {(1 / (self.step_time + self.draw_time)):.1f}"
         output3 = f"Best:  {self.simulation.best_fitness:.4f}      Last:   {last_fitness}"
-        pyglet.text.Label(output1, 20, 60, color=[255, 255, 255], height=100).draw()
+        # pyglet.text.Label(output1, 20, 60, color=[255, 255, 255], height=100).draw()
         pyglet.text.Label(output2, 20, 40, color=[255, 255, 255], height=100).draw()
         pyglet.text.Label(output3, 20, 20, color=[255, 255, 255], height=100).draw()
         self.draw_time = timeit.default_timer() - draw_start_time

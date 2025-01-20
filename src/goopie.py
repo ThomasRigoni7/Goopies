@@ -12,8 +12,9 @@ class Goopie(ABC):
     MASS = 0.05
     RADIUS = 30
     COLLISION_TYPE = 1
-    def __init__(self, x: float = None, y:float = None, angle:float = None, generation_range: float = 2000, generator = np.random.default_rng()) -> None:
+    def __init__(self, simulation, x: float = None, y:float = None, angle:float = None, generation_range: float = 2000, generator = np.random.default_rng()) -> None:
         
+        self.simulation = simulation
         self.create_shapes(x, y, angle, generation_range, generator)
         self.sprite = None
         self.vision_arc = None
@@ -127,14 +128,15 @@ class Goopie(ABC):
 
 class CNNGoopie(Goopie):
 
-    def __init__(self, x: float = None, y:float = None, angle:float = None, generation_range: float = 2000, generator = np.random.default_rng()):
-        super().__init__(x, y, angle, generation_range, generator)
+    def __init__(self, simulation,  x: float = None, y:float = None, angle:float = None, generation_range: float = 2000, generator = np.random.default_rng()):
+        super().__init__(simulation, x, y, angle, generation_range, generator)
 
         self.vision = WideVision(self)
         self.brain = CNNBrain(self.vision.VISION_BUFFER_WIDTH, 3).requires_grad_(False)
     
     def step(self, dt: float):
         self.energy -= 0.1*dt
+        self.simulation.biomass += 0.1*dt
         self.age += dt
         if self.energy <= 0:
             self.alive = False
@@ -147,10 +149,11 @@ class CNNGoopie(Goopie):
 
     def reproduce(self):
         if self.age > 3 and self.energy > 0.8:
-            child = CNNGoopie(self.get_position().x, self.get_position().y)
+            child = CNNGoopie(self.simulation, self.get_position().x, self.get_position().y)
 
             child.brain.load_state_dict(self.brain.state_dict())
-            child.mutate(0.5, 0.1)
+            child.mutate(self.simulation.mutation_prob, self.simulation.mutation_amount)
+            child.energy = 0.4
             self.energy -= 0.4
             return child
             

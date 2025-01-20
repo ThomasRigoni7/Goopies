@@ -10,15 +10,18 @@ from pathlib import Path
 
 class Simulation:
     WALL_COLLISION_TYPE = 4
-    def __init__(self, num_goopies, num_food, space_size, test: bool = False, respawn_rate: float = 0.5, mutation_prob = 0.5, mutation_amount = 0.1, blueprint: str = None) -> None:
+    def __init__(self, num_goopies, num_food, space_size, test: bool = False, random_respawn_rate: float = 0.5, mutation_prob = 0.5, mutation_amount = 0.1, blueprint: str = None) -> None:
         super().__init__()
         self.num_goopies = num_goopies
         self.num_food = num_food
         self.space_size = space_size
         self.test = test
-        self.respawn_rate = respawn_rate
+        self.random_respawn_rate = random_respawn_rate
         self.mutation_prob = mutation_prob
         self.mutation_amount = mutation_amount
+
+        # biomass is collected whenever a goopie consumes energy
+        self.biomass = 0
 
         self.generator = np.random.default_rng()
         self.goopie_spawn_range = space_size * 0.8
@@ -40,8 +43,8 @@ class Simulation:
         self.goopies :list[Goopie] = []
         for _ in range(num_goopies):
             if test:
-                goopie1 = Goopie(0, 0, math.pi/4)
-                goopie2 = Goopie(50, 50, math.pi/4)
+                goopie1 = Goopie(self, 0, 0, math.pi/4)
+                goopie2 = Goopie(self, 50, 50, math.pi/4)
                 self.add_goopie(goopie1)
                 self.add_goopie(goopie2)
                 break
@@ -80,8 +83,6 @@ class Simulation:
         if food in self.foods:
             if goopie.eat(food):
                 self.remove_food(food)
-                new_food = Food(generation_range=self.food_spawn_range, generator=self.generator)
-                self.add_food(new_food)
         return False
 
     def vision_food_collision(self, arbiter: pymunk.Arbiter, space: pymunk.Space, data):
@@ -145,7 +146,7 @@ class Simulation:
             self.window.add_food_sprite(food)
 
     def add_blueprint(self, brain_path: str):
-        goopie = Goopie()
+        goopie = CNNGoopie(self)
         goopie.fitness = 0.05
         goopie.brain.load_state_dict(torch.load(brain_path))
         self.update_best_goopies(goopie)
@@ -169,11 +170,16 @@ class Simulation:
             if not goopie.is_alive():
                 self.remove_goopie(goopie)
                 self.update_best_goopies(goopie)
-                if len(self.goopies) < self.num_goopies:
-                    self.spawn_goopie(self.respawn_rate, self.mutation_prob, self.mutation_amount)
+                # if len(self.goopies) < self.num_goopies:
+                #     self.spawn_goopie(self.respawn_rate, self.mutation_prob, self.mutation_amount)
 
         self.goopie_time = timeit.default_timer() - goopie_step_start_time
 
+        # spawn more food
+        if self.biomass > 1:
+            food = Food(generation_range=self.food_spawn_range, generator=self.generator)
+            self.biomass -= food.amount
+            self.add_food(food)
 
         self.num_steps += 1
         if self.num_steps % 10000 == 0:
@@ -190,7 +196,7 @@ class Simulation:
     
     def spawn_goopie(self, random_prob: float, mutation_prob: float, mutation_amount: float):   
         random_spawn = self.generator.uniform() < random_prob
-        goopie = CNNGoopie(generation_range=self.goopie_spawn_range, generator=self.generator)
+        goopie = CNNGoopie(self, generation_range=self.goopie_spawn_range, generator=self.generator)
         if len(self.best_goopies) > 0 and not random_spawn:
             # load nn from one of the best fit goopies
             probs = torch.nn.functional.softmax(torch.tensor([g.fitness / 3 for g in self.best_goopies]), dim=0)
@@ -206,27 +212,6 @@ class Simulation:
         from window_pyglet import GameWindow
         self.window = GameWindow(self)
         self.window.run()
-        # from pymunk.pyglet_util import DrawOptions
-        # import pyglet
-        # options = DrawOptions()
-
-        # from pyglet.window import Window
-        # window = Window(height=1000, width=1000)
-        # from camera_group import CenteredCameraGroup
-        # camera = CenteredCameraGroup(window, 0, 0, 0.5)
-        
-        # @window.event
-        # def on_draw():
-        #     pyglet.gl.glClearColor(0, 0, 0, 0)
-        #     window.clear()
-
-        #     self.step()
-        #     camera.set_state()
-        #     self.space.debug_draw(options)
-        #     camera.unset_state()
-
-        # pyglet.app.run()
-
         
 
     def save_best_goopies(self, folder):
