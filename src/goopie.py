@@ -20,7 +20,7 @@ class Goopie(ABC):
         self.vision_arc = None
         self.age = 0
 
-        self.energy = 1
+        self.energy = 0.5
         self.alive = True
         self.max_turn = 1
         self.max_acceleration = 20
@@ -77,6 +77,7 @@ class Goopie(ABC):
         amount = min(1 - self.energy, food.amount)
         self.energy += amount 
         self.fitness += amount
+        print(self.energy)
         return True
 
     def is_alive(self):
@@ -149,6 +150,7 @@ class CNNGoopie(Goopie):
 
     def reproduce(self):
         if self.age > 3 and self.energy > 0.8:
+            print(self.energy)
             child = CNNGoopie(self.simulation, self.get_position().x, self.get_position().y)
 
             child.brain.load_state_dict(self.brain.state_dict())
@@ -156,6 +158,7 @@ class CNNGoopie(Goopie):
             child.energy = 0.4
             self.energy -= 0.4
             return child
+        return None
             
 
 class NEATGoopie():

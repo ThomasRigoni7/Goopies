@@ -48,7 +48,7 @@ class GameWindow(Window):
         self.wall_lines = pyglet.graphics.Batch()
         self.walls = []
         for wall in simulation.walls:
-            w = pyglet.shapes.Line(wall.a.x, wall.a.y, wall.b.x, wall.b.y, thickness=20, color=[255, 255, 255, 255], batch=self.wall_lines, group=self.camera)
+            w = pyglet.shapes.Line(wall.a.x, wall.a.y, wall.b.x, wall.b.y, width=20, color=[255, 255, 255, 255], batch=self.wall_lines, group=self.camera)
             self.walls.append(w)
         
         self.simulation = simulation
@@ -146,6 +146,12 @@ class GameWindow(Window):
             pos = food.get_position()
             food.sprite.position = pos.x, pos.y, 0
             food.sprite.rotation = -degrees(food.shape.body.angle - pi/2)
+        
+    def save_a_frame(self):
+        file_num=str(self.simulation.num_steps - 2000).zfill(5)
+        filename="frames/frame-"+file_num+'.png'
+        pyglet.image.get_buffer_manager().get_color_buffer().save(filename)
+        print('image file writen : ',filename)
 
 if __name__ == "__main__":
     window = GameWindow()

@@ -23,7 +23,7 @@ class Simulation:
         # biomass is collected whenever a goopie consumes energy
         self.biomass = 0
 
-        self.generator = np.random.default_rng()
+        self.generator = np.random.default_rng(42)
         self.goopie_spawn_range = space_size * 0.8
         self.food_spawn_range = space_size - (2 * 10 + Food.RADIUS) # 2 * wall width + food radius
         self.num_steps = 0
@@ -41,25 +41,31 @@ class Simulation:
         self.create_walls()
 
         self.goopies :list[Goopie] = []
-        for _ in range(num_goopies):
-            if test:
-                goopie1 = Goopie(self, 0, 0, math.pi/4)
-                goopie2 = Goopie(self, 50, 50, math.pi/4)
-                self.add_goopie(goopie1)
-                self.add_goopie(goopie2)
-                break
-            else:
-                self.spawn_goopie(0.5, 0.0, 0.0)
+        if test:
+            # goopie1 = CNNGoopie(self, 0, 0, math.pi/4)
+            # goopie2 = CNNGoopie(self, 50, 50, math.pi/4)
+            # self.add_goopie(goopie1)
+            # self.add_goopie(goopie2)
+            # self.spawn_goopie(random_respawn_rate, 0.0, 0.0)
+            self.spawn_goopie(random_respawn_rate, 0.0, 0.0, 0, 0)
+        else:
+            for _ in range(num_goopies):
+                self.spawn_goopie(random_respawn_rate, 0.0, 0.0)
         
         self.foods :list[Food] = []
-        for _ in range(num_food):
-            if test:
-                food1 = Food(25, 25)
-                # food2 = Food(-50, 50)
-                self.add_food(food1)
-                # self.add_food(food2)
-                pass
-            else:
+        if test:
+            print("FOOD!")
+            food1 = Food(100, 100)
+            food2 = Food(250, 50)
+            food3 = Food(200, -200)
+            food4 = Food(0, -200)
+            #food5 = Food(400, -400)
+            self.add_food(food1)
+            self.add_food(food2)
+            self.add_food(food3)
+            self.add_food(food4)
+        else:
+            for _ in range(num_food):
                 food = Food(generation_range=self.food_spawn_range, generator=self.generator)
                 self.add_food(food)
 
@@ -165,6 +171,7 @@ class Simulation:
         for goopie in self.goopies:
             goopie.step(dt)
             child = goopie.reproduce()
+            # child = None
             if child is not None:
                 self.add_goopie(child)
             if not goopie.is_alive():
@@ -194,9 +201,9 @@ class Simulation:
             self.fitness_thresh = self.best_goopies[-1].fitness
             self.best_fitness = self.best_goopies[0].fitness
     
-    def spawn_goopie(self, random_prob: float, mutation_prob: float, mutation_amount: float):   
+    def spawn_goopie(self, random_prob: float, mutation_prob: float, mutation_amount: float, x=None, y=None):   
         random_spawn = self.generator.uniform() < random_prob
-        goopie = CNNGoopie(self, generation_range=self.goopie_spawn_range, generator=self.generator)
+        goopie = CNNGoopie(self, x=x, y=y, generation_range=self.goopie_spawn_range, generator=self.generator)
         if len(self.best_goopies) > 0 and not random_spawn:
             # load nn from one of the best fit goopies
             probs = torch.nn.functional.softmax(torch.tensor([g.fitness / 3 for g in self.best_goopies]), dim=0)
