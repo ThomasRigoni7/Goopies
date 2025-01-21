@@ -7,7 +7,7 @@ Agents (blue) called Goopies are placed in an environment where they have to eat
 Full simulation:
 ![full simulation](figures/full_simulation.gif)
 
-Close-up of a single evolved Goopie:
+Close-up of a single evolved Goopie (the white circle is the vision radius):
 ![single goopie](figures/single_goopie.gif)
 
 ## Installation and running the project
@@ -21,7 +21,7 @@ To install all the required dependencies, simply clone the repository and instal
 
 Then install all the requirements:
 
-    pip install -r requirements
+    pip install -r requirements.txt
 
 To run the project simply execute `main.py`:
 
